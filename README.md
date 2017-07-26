@@ -1,2 +1,0 @@
-# confs
-Various configurations
