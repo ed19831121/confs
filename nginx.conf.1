@@ -1,9 +1,25 @@
+# nginx -c /opt/nginx/1.6.2/conf/nginx.conf	启动时指定配置文件
+# nginx -s reload				运行时重载配置文件
+# nginx -s stop					运行时快速关闭nginx
+# nginx -s quit 				运行时优雅关闭nginx 所有的工作进程会停止接受新的连接，并继续服务旧的连接请求直到所有的请求完成后才退出
+# ngnix -s reopen				运行时重新打开日志文件
+# nginx -v    					查看nginx版本
+nginx version: nginx/1.6.2
+---
+
 user       		www www;  			## Default: nobody
 							## 		Nginx 用户及组：	用户 组。
 							##		window下不指定
-worker_processes  	5;  				## Default: 1	工作进程：		数目。		根据硬件调整，通常等于	CPU数量
+
+events {
+    worker_connections  1024;				## 在作为web服务器的情况下，nginx最大连接数为worker_connections * worker_processes
+}
+
+worker_processes  	5;  				## 启动了5个worker进程		根据硬件调整，通常等于	CPU数量
 							## 						  			或者	2倍于CPU
-error_log  		logs/error.log;			## 		错误日志：		存放路径。
+							## 在作为web服务器的情况下，nginx最大连接数为worker_connections * worker_processes
+
+error_log  		logs/error.log;			## 		错误日志的存放路径。
 pid        		logs/nginx.pid;			## 		pid（进程标识符）：	存放路径。
 worker_rlimit_nofile 	8192;				##		指定进程可以打开的最大文件描述符：数目。
 							##这个指令是指当一个nginx进程打开的最多文件描述符数目，
@@ -12,9 +28,6 @@ worker_rlimit_nofile 	8192;				##		指定进程可以打开的最大文件描述
 							##现在在Linux 2.6内核下开启文件打开数为65535，worker_rlimit_nofile就相应应该填写65535。
 							##这是因为nginx调度时分配请求到进程并不是那么的均衡，
 							##所以假如填写10240，总并发量达到3-4万时就有进程可能超过10240了，这时会返回502错误
-events {
-  	worker_connections  4096;  			## Default: 1024
-}
 http {
   	include    	conf/mime.types;
   	include    	/etc/nginx/proxy.conf;
@@ -24,7 +37,18 @@ http {
   	log_format   	main 	'$remote_addr - $remote_user [$time_local]  $status '
     				'"$request" $body_bytes_sent "$http_referer" '
     				'"$http_user_agent" "$http_x_forwarded_for"';
-  	access_log   	logs/access.log  main;
+	# $remote_addr 	与$http_x_forwarded_for用以记录客户端的ip地址；
+	# $remote_user：用来记录	'客户端用户名称'；
+	# $time_local： 用来记录	访问'时间'与'时区'；
+	# $request： 	用来记录	请求的url与http协议；
+	# $status： 	用来记录	请求状态；成功是200，
+	# $body_bytes_sent：记录	发送给客户端文件主体内容大小；
+	# $http_referer 用来记录	从那个页面链接访问过来的；
+	# $http_user_agent：记录	客户浏览器的相关信息；
+	
+	# server_name指令主要用于配置基于名称的虚拟主机。支持通配符*
+
+  	access_log   	logs/access.log  main; 		#指定日志文件的存放路径
   	sendfile     	on;
   	tcp_nopush   	on;
   	server_names_hash_bucket_size 	128; 		# this seems to be required for some vhosts
@@ -52,10 +76,10 @@ http {
     	}
   }
   upstream big_server_com {
-    	server 127.0.0.3:8000 weight=5;
-    	server 127.0.0.3:8001 weight=5;
-    	server 192.168.0.1:8000;
-    	server 192.168.0.1:8001;
+    	server 127.0.0.3:8000 	weight=5;
+    	server 127.0.0.3:8001 	weight=5;
+    	server 192.168.0.1:8000 max_fails=3 fail_timeout=30s; 	# 最大的重试次数	和	重试时间间隔
+    	server 192.168.0.1:8001 backup; 			# backup指的是	仅当其他server	down或者忙时才会请求	这台server
   }
   server { 			# simple load balancing
     	listen          80;

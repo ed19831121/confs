@@ -1,0 +1,10 @@
+RewriteEngine On
+RewriteCond %{HTTP_HOST} ^(www\.)?xxx\.com$	#%{HTTP_HOST}表示	当前访问的网址. 如果访问的网址是xxx.com或者 www.xxx.com就执行以下的语句，不符合就跳过。
+RewriteCond %{REQUEST_URI} !^/blog/		#%{REQUEST_URI}表示	访问的相对地址，就是相对根目录的地址，就是域名/后面的成分，格式上包括最前面的“/”
+RewriteCond %{REQUEST_FILENAME} !-f		#请求的文件或路径是不存在的，如果文件或路径存在将返回已经存在的文件或路径
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /blog/$1			#重写规则，最重要的部分，意思是当上面的RewriteCond条件都满足的时候，将会执行此重写规则，^(.*)$是一个正则表达的 匹配，匹配的是当前请求的URL，
+	^(.*)$意思是匹配当前URL任意字符，
+	.表示任意单个字符，
+	*表示匹配0次或N次（N>0），
+后面 /blog/$1是重写成分，意思是将前面匹配的字符重写成/blog/$1，这个$1表示反向匹配，引用的是前面第一个圆括号的成分，即^(.*)$中 的.* 
